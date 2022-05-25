@@ -1,0 +1,351 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html><head></head><body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div>
+
+
+
+<h1 class="title toc-ignore">Assignment3-Chopde-CAPTCHA Images</h1>
+<h4 class="author">Sylvia Chopde</h4>
+<h4 class="date">4/13/2022</h4>
+
+</div>
+
+
+<div class="section level5">
+<h5><strong>Background:</strong></h5>
+<p>The dataset contains CAPTCHA images. CAPTCHA is a way for identifying users and to block bots. They have been replaced by reCAPTCHA because they are breakable using AI.</p>
+</div>
+<div class="section level5">
+<h5><strong>Data Sources:</strong></h5>
+<p><a rel="noopener" href="https://www.researchgate.net/publication/248380891_captcha_dataset/link/00b4951ddc422dddad000000/download">Actual Dataset Download link</a><br/>
+<a rel="noopener" href="https://www.kaggle.com/datasets/fournierp/captcha-version-2-images">Kaggle link</a></p>
+</div>
+<div class="section level5">
+<h5><strong>Kaggle screenshot for no R Code present:</strong></h5>
+<div class="figure">
+<img src="javascript://" alt=""/>
+<p class="caption">Kaggle screen shot for no R Code present</p>
+</div>
+<p>Loading the required Libraries.</p>
+<pre class="r"><code>library(keras)
+library(reticulate)
+library(keras)
+library(reticulate)</code></pre>
+<pre class="r"><code>original_dataset_dir &lt;- &quot;captcha_dataset/train&quot;</code></pre>
+<p>We are going to create subset of the data</p>
+<pre class="r"><code>base_dir &lt;- &quot;captcha_dataset_small&quot; # to store a subset of data that we are going to use
+dir.create(base_dir)
+
+train_dir &lt;- file.path(base_dir, &quot;train&quot;)
+dir.create(train_dir)
+
+validation_dir &lt;- file.path(base_dir, &quot;validation&quot;)
+dir.create(validation_dir)
+
+test_dir &lt;- file.path(base_dir, &quot;test&quot;)
+dir.create(test_dir)
+
+train_CAPTCHA_dir &lt;- file.path(train_dir, &quot;CAPTCHA&quot;)
+dir.create(train_CAPTCHA_dir)
+
+validation_caPTCHA_dir &lt;- file.path(validation_dir, &quot;CAPTCHA&quot;)
+dir.create(validation_caPTCHA_dir)
+
+test_CAPTCHA_dir &lt;- file.path(test_dir, &quot;CAPTCHA&quot;)
+dir.create(test_CAPTCHA_dir)
+
+fnames &lt;- paste0(&quot;1 (&quot;, 1:250, &quot;)&quot;, &quot;.png&quot;)
+file.copy(file.path(original_dataset_dir, fnames), file.path(train_CAPTCHA_dir))</code></pre>
+<pre><code>##   [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [31] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [46] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [61] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [76] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [91] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [106] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [121] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [136] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [151] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [166] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [181] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [196] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [211] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [226] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [241] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
+<pre class="r"><code>fnames &lt;- paste0(&quot;1 (&quot;, 256:375, &quot;)&quot;, &quot;.png&quot;)
+file.copy(file.path(original_dataset_dir, fnames), file.path(validation_caPTCHA_dir))</code></pre>
+<pre><code>##   [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [31] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [46] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [61] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [76] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [91] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [106] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
+<pre class="r"><code>fnames &lt;- paste0(&quot;1 (&quot;,376:500, &quot;)&quot;, &quot;.png&quot;)
+file.copy(file.path(original_dataset_dir, fnames), file.path(test_CAPTCHA_dir))</code></pre>
+<pre><code>##   [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [31] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [46] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [61] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [76] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+##  [91] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [106] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [121] TRUE TRUE TRUE TRUE TRUE</code></pre>
+<p>Here we will make a large network since it is a complex task.</p>
+<pre class="r"><code>library(keras)
+model_v1 &lt;- keras_model_sequential() %&gt;%
+  layer_conv_2d(filters = 32, kernel_size = c(3, 3), activation = &quot;relu&quot;,
+                input_shape = c(150, 150, 3)) %&gt;%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %&gt;%
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = &quot;relu&quot;) %&gt;%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %&gt;%
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = &quot;relu&quot;) %&gt;%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %&gt;%
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = &quot;relu&quot;) %&gt;%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %&gt;%
+  layer_flatten() %&gt;%
+  layer_dense(units = 512, activation = &quot;relu&quot;) %&gt;%
+  layer_dense(units = 1, activation = &quot;sigmoid&quot;)
+model_v1 %&gt;% compile(
+  loss = &quot;binary_crossentropy&quot;,
+  optimizer = optimizer_rmsprop(),
+  metrics = c(&quot;acc&quot;)
+)
+
+summary(model_v1)</code></pre>
+<pre><code>## Model: &quot;sequential&quot;
+## ________________________________________________________________________________
+## Layer (type)                        Output Shape                    Param #     
+## ================================================================================
+## conv2d_3 (Conv2D)                   (None, 148, 148, 32)            896         
+## ________________________________________________________________________________
+## max_pooling2d_3 (MaxPooling2D)      (None, 74, 74, 32)              0           
+## ________________________________________________________________________________
+## conv2d_2 (Conv2D)                   (None, 72, 72, 64)              18496       
+## ________________________________________________________________________________
+## max_pooling2d_2 (MaxPooling2D)      (None, 36, 36, 64)              0           
+## ________________________________________________________________________________
+## conv2d_1 (Conv2D)                   (None, 34, 34, 128)             73856       
+## ________________________________________________________________________________
+## max_pooling2d_1 (MaxPooling2D)      (None, 17, 17, 128)             0           
+## ________________________________________________________________________________
+## conv2d (Conv2D)                     (None, 15, 15, 128)             147584      
+## ________________________________________________________________________________
+## max_pooling2d (MaxPooling2D)        (None, 7, 7, 128)               0           
+## ________________________________________________________________________________
+## flatten (Flatten)                   (None, 6272)                    0           
+## ________________________________________________________________________________
+## dense_1 (Dense)                     (None, 512)                     3211776     
+## ________________________________________________________________________________
+## dense (Dense)                       (None, 1)                       513         
+## ================================================================================
+## Total params: 3,453,121
+## Trainable params: 3,453,121
+## Non-trainable params: 0
+## ________________________________________________________________________________</code></pre>
+<p>Data Processing: 1) Read the images files. 2) Decode the PNG content to RGB grids of pixel. 3) Convert these into floating-point tensors. 4) Rescale the pixel values to the [0,1] interval.</p>
+<pre class="r"><code>train_datagen &lt;- image_data_generator(rescale = 1/255)
+validation_datagen &lt;- image_data_generator(rescale = 1/255)
+train_generator &lt;- flow_images_from_directory(
+  train_dir, # Target directory
+  train_datagen, # Training data generator
+  target_size = c(150, 150), # Resizes all images to 150 &#215; 150
+  batch_size = 20, # 20 samples in one batch
+  class_mode = &quot;binary&quot; # Because we use binary_crossentropy loss,
+  # we need binary labels.
+)
+
+validation_generator &lt;- flow_images_from_directory(
+  validation_dir,
+  validation_datagen,
+  target_size = c(150, 150),
+  batch_size = 20,
+  class_mode = &quot;binary&quot;
+)</code></pre>
+<p>Let’s fit the model to the data using the generator. We use fit_generator function.</p>
+<pre class="r"><code>history_v1new = readr::read_rds(&quot;captcha_history.rds&quot;)
+plot(history_v1new)</code></pre>
+<p><img src="javascript://" width="672"/> Note: Using small dataset can cause overfitting issues</p>
+<p>Let us try to avoid over-fitting with Data augmentation Setting up a data augmentation configuration via image_data_generator</p>
+<pre class="r"><code>datagen &lt;- image_data_generator(
+  rescale = 1/255,
+  rotation_range = 40, # randomly rotate images up to 40 degrees
+  width_shift_range = 0.2, # randomly shift 20% pictures horizontally
+  height_shift_range = 0.2, # randomly shift 20% pictures vertically
+  shear_range = 0.2, # randomly apply shearing transformations
+  zoom_range = 0.2, # randomly zooming inside pictures
+  horizontal_flip = TRUE, # randomly flipping half the images horizontally
+  fill_mode = &quot;nearest&quot; # used for filling in newly created pixels
+)</code></pre>
+<p>Augmented images look as below</p>
+<pre class="r"><code>fnames &lt;- list.files(test_CAPTCHA_dir, full.names = TRUE)
+img_path &lt;- fnames[[3]] # Chooses one image to augment
+img &lt;- image_load(img_path, target_size = c(150, 150))
+img_array &lt;- image_to_array(img) # Converts the shape back to (150, 150, 3)
+img_array &lt;- array_reshape(img_array, c(1, 150, 150, 3))
+augmentation_generator &lt;- flow_images_from_data(
+  img_array,
+  generator = datagen,
+  batch_size = 1
+)
+op &lt;- par(mfrow = c(2, 2), pty = &quot;s&quot;, mar = c(1, 0, 1, 0))
+for (i in 1:4) {
+  batch &lt;- generator_next(augmentation_generator)
+  plot(as.raster(batch[1,,,]))
+}</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<pre class="r"><code>par(op)</code></pre>
+<p>New convnet that includes dropout</p>
+<pre class="r"><code>model_v2 &lt;- keras_model_sequential() %&gt;%
+  layer_conv_2d(filters = 32, kernel_size = c(3, 3), activation = &quot;relu&quot;,
+                input_shape = c(150, 150, 3)) %&gt;%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %&gt;%
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = &quot;relu&quot;) %&gt;%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %&gt;%
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = &quot;relu&quot;) %&gt;%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %&gt;%
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = &quot;relu&quot;) %&gt;%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %&gt;%
+  layer_flatten() %&gt;%
+  layer_dropout(rate = 0.5) %&gt;% # randomly set 50% of weights to 0
+  layer_dense(units = 512, activation = &quot;relu&quot;) %&gt;%
+  layer_dense(units = 1, activation = &quot;sigmoid&quot;)</code></pre>
+<pre class="r"><code>model_v2 %&gt;% compile(
+  loss = &quot;binary_crossentropy&quot;,
+  optimizer = optimizer_rmsprop(lr = 1e-4),
+  metrics = c(&quot;acc&quot;)
+)</code></pre>
+<p>Training the convnet using data-augmentation generators:</p>
+<pre class="r"><code>test_datagen &lt;- image_data_generator(rescale = 1/255) # no data augmentation
+train_generator &lt;- flow_images_from_directory(
+  train_dir,
+  datagen, # Our data augmentation configuration defined earlier
+  target_size = c(150, 150),
+  batch_size = 32,
+  class_mode = &quot;binary&quot;
+)
+
+validation_generator &lt;- flow_images_from_directory(
+  validation_dir,
+  test_datagen, # Note that the validation data shouldn’t be augmented!
+  target_size = c(150, 150),
+  batch_size = 32,
+  class_mode = &quot;binary&quot;
+)</code></pre>
+<p>No More overfitting</p>
+<pre class="r"><code>history_v2new = readr::read_rds(&quot;captcha_history_v2.rds&quot;)
+plot(history_v2new)</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<p>Let’s evaluate this model using the test data:</p>
+<pre class="r"><code>test_generator &lt;- flow_images_from_directory(
+  test_dir,
+  test_datagen, # Note that the test data shouldn’t be augmented!
+  target_size = c(150, 150),
+  batch_size = 20,
+  class_mode = &quot;binary&quot;
+)
+model_v2 %&gt;% evaluate(test_generator, steps = 50)</code></pre>
+<pre><code>## $loss
+## [1] 0.6680996
+## 
+## $acc
+## [1] 1</code></pre>
+<p>Above is the accuracy of data augmentation without using any pretrained model.</p>
+<p>Thank you!!!</p>
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="module" src="https://s.brightspace.com/lib/bsi/20.22.4-251/unbundled/mathjax.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					if (document.querySelector('math') || /\$\$|\\\(|\\\[|\\begin{|\\ref{|\\eqref{/.test(document.body.innerHTML)) {
+						document.querySelectorAll('mspace[linebreak="newline"]').forEach(elm => {
+							elm.setAttribute('style', 'display: block; height: 0.5rem;');
+						});
+
+						window.D2L.MathJax.loadMathJax({
+							'outputScale': 1.3,
+							'renderLatex': false
+						});
+					}
+				});</script></body></html>
