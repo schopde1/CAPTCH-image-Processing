@@ -1,0 +1,227 @@
+---
+title: "Assignment3-Chopde-CAPTCHA Images"
+author: "Sylvia Chopde"
+date: "4/13/2022"
+output: html_document
+---
+##### **Background:**
+The dataset contains CAPTCHA images. CAPTCHA is a way for identifying users and to block bots. They have been replaced by reCAPTCHA because they are breakable using AI. 
+
+##### **Data Sources:**
+[Actual Dataset Download link](https://www.researchgate.net/publication/248380891_captcha_dataset/link/00b4951ddc422dddad000000/download)  
+[Kaggle link](https://www.kaggle.com/datasets/fournierp/captcha-version-2-images) 
+
+##### **Kaggle screenshot for no R Code present:**
+
+![Kaggle screen shot for no R Code present](Kaggle Screentshot.PNG)
+
+Loading the required Libraries. 
+
+```{r message=FALSE, warning=FALSE}
+library(keras)
+library(reticulate)
+library(keras)
+library(reticulate)
+```
+
+```{r message=FALSE, warning=FALSE}
+original_dataset_dir <- "captcha_dataset/train"
+```
+
+We are going to create subset of the data 
+```{r message=FALSE, warning=FALSE}
+base_dir <- "captcha_dataset_small" # to store a subset of data that we are going to use
+dir.create(base_dir)
+
+train_dir <- file.path(base_dir, "train")
+dir.create(train_dir)
+
+validation_dir <- file.path(base_dir, "validation")
+dir.create(validation_dir)
+
+test_dir <- file.path(base_dir, "test")
+dir.create(test_dir)
+
+train_CAPTCHA_dir <- file.path(train_dir, "CAPTCHA")
+dir.create(train_CAPTCHA_dir)
+
+validation_caPTCHA_dir <- file.path(validation_dir, "CAPTCHA")
+dir.create(validation_caPTCHA_dir)
+
+test_CAPTCHA_dir <- file.path(test_dir, "CAPTCHA")
+dir.create(test_CAPTCHA_dir)
+
+fnames <- paste0("1 (", 1:250, ")", ".png")
+file.copy(file.path(original_dataset_dir, fnames), file.path(train_CAPTCHA_dir))
+
+fnames <- paste0("1 (", 256:375, ")", ".png")
+file.copy(file.path(original_dataset_dir, fnames), file.path(validation_caPTCHA_dir))
+
+fnames <- paste0("1 (",376:500, ")", ".png")
+file.copy(file.path(original_dataset_dir, fnames), file.path(test_CAPTCHA_dir))
+```
+
+Here we will make a large network since it is a complex task.
+```{r message=FALSE, warning=FALSE}
+library(keras)
+model_v1 <- keras_model_sequential() %>%
+  layer_conv_2d(filters = 32, kernel_size = c(3, 3), activation = "relu",
+                input_shape = c(150, 150, 3)) %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  layer_flatten() %>%
+  layer_dense(units = 512, activation = "relu") %>%
+  layer_dense(units = 1, activation = "sigmoid")
+model_v1 %>% compile(
+  loss = "binary_crossentropy",
+  optimizer = optimizer_rmsprop(),
+  metrics = c("acc")
+)
+
+summary(model_v1)
+
+```
+
+
+Data Processing:
+1) Read the images files.
+2) Decode the PNG content to RGB grids of pixel.
+3) Convert these into floating-point tensors.
+4) Rescale the pixel values to the [0,1] interval.
+```{r message=FALSE, warning=FALSE}
+train_datagen <- image_data_generator(rescale = 1/255)
+validation_datagen <- image_data_generator(rescale = 1/255)
+train_generator <- flow_images_from_directory(
+  train_dir, # Target directory
+  train_datagen, # Training data generator
+  target_size = c(150, 150), # Resizes all images to 150 × 150
+  batch_size = 20, # 20 samples in one batch
+  class_mode = "binary" # Because we use binary_crossentropy loss,
+  # we need binary labels.
+)
+
+validation_generator <- flow_images_from_directory(
+  validation_dir,
+  validation_datagen,
+  target_size = c(150, 150),
+  batch_size = 20,
+  class_mode = "binary"
+)
+
+```
+
+Let's fit the model to the data using the generator. We use fit_generator function.
+```{r message=FALSE, warning=FALSE}
+history_v1new = readr::read_rds("captcha_history.rds")
+plot(history_v1new)
+```
+Note: Using small dataset can cause overfitting issues
+
+Let us try to avoid over-fitting with Data augmentation
+Setting up a data augmentation configuration via image_data_generator
+```{r message=FALSE, warning=FALSE}
+datagen <- image_data_generator(
+  rescale = 1/255,
+  rotation_range = 40, # randomly rotate images up to 40 degrees
+  width_shift_range = 0.2, # randomly shift 20% pictures horizontally
+  height_shift_range = 0.2, # randomly shift 20% pictures vertically
+  shear_range = 0.2, # randomly apply shearing transformations
+  zoom_range = 0.2, # randomly zooming inside pictures
+  horizontal_flip = TRUE, # randomly flipping half the images horizontally
+  fill_mode = "nearest" # used for filling in newly created pixels
+)
+```
+
+
+Augmented images look as below
+```{r message=FALSE, warning=FALSE}
+fnames <- list.files(test_CAPTCHA_dir, full.names = TRUE)
+img_path <- fnames[[3]] # Chooses one image to augment
+img <- image_load(img_path, target_size = c(150, 150))
+img_array <- image_to_array(img) # Converts the shape back to (150, 150, 3)
+img_array <- array_reshape(img_array, c(1, 150, 150, 3))
+augmentation_generator <- flow_images_from_data(
+  img_array,
+  generator = datagen,
+  batch_size = 1
+)
+op <- par(mfrow = c(2, 2), pty = "s", mar = c(1, 0, 1, 0))
+for (i in 1:4) {
+  batch <- generator_next(augmentation_generator)
+  plot(as.raster(batch[1,,,]))
+}
+par(op)
+```
+
+New convnet that includes dropout
+```{r message=FALSE, warning=FALSE}
+model_v2 <- keras_model_sequential() %>%
+  layer_conv_2d(filters = 32, kernel_size = c(3, 3), activation = "relu",
+                input_shape = c(150, 150, 3)) %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>%
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+  layer_flatten() %>%
+  layer_dropout(rate = 0.5) %>% # randomly set 50% of weights to 0
+  layer_dense(units = 512, activation = "relu") %>%
+  layer_dense(units = 1, activation = "sigmoid")
+```
+
+```{r message=FALSE, warning=FALSE}
+model_v2 %>% compile(
+  loss = "binary_crossentropy",
+  optimizer = optimizer_rmsprop(lr = 1e-4),
+  metrics = c("acc")
+)
+```
+
+Training the convnet using data-augmentation generators:
+```{r message=FALSE, warning=FALSE}
+test_datagen <- image_data_generator(rescale = 1/255) # no data augmentation
+train_generator <- flow_images_from_directory(
+  train_dir,
+  datagen, # Our data augmentation configuration defined earlier
+  target_size = c(150, 150),
+  batch_size = 32,
+  class_mode = "binary"
+)
+
+validation_generator <- flow_images_from_directory(
+  validation_dir,
+  test_datagen, # Note that the validation data shouldn’t be augmented!
+  target_size = c(150, 150),
+  batch_size = 32,
+  class_mode = "binary"
+)
+```
+
+No More overfitting
+```{r message=FALSE, warning=FALSE}
+history_v2new = readr::read_rds("captcha_history_v2.rds")
+plot(history_v2new)
+```
+
+Let's evaluate this model using the test data:
+```{r message=FALSE, warning=FALSE}
+test_generator <- flow_images_from_directory(
+  test_dir,
+  test_datagen, # Note that the test data shouldn’t be augmented!
+  target_size = c(150, 150),
+  batch_size = 20,
+  class_mode = "binary"
+)
+model_v2 %>% evaluate(test_generator, steps = 50)
+```
+
+Above is the accuracy of data augmentation without using any pretrained model.
+
+Thank you!!!
